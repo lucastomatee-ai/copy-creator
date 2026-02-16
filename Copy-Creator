@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpha Copy Generator - IA + TTS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Space Grotesk', sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .header { background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%); border: 2px solid #cc0000; border-radius: 16px; padding: 40px; margin-bottom: 30px; position: relative; overflow: hidden; }
+        .header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(204, 0, 0, 0.2) 0%, transparent 70%); animation: pulse 3s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 0.8; } }
+        .header-content { position: relative; z-index: 1; }
+        .title { font-size: 48px; font-weight: 900; color: #ff3333; margin-bottom: 10px; text-shadow: 0 0 30px rgba(255, 51, 51, 0.5); letter-spacing: -2px; }
+        .subtitle { color: #999; font-size: 16px; font-weight: 600; }
+        
+        .main-grid { display: grid; grid-template-columns: 1fr 400px; gap: 30px; margin-bottom: 30px; }
+        .panel { background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%); border: 2px solid #cc0000; border-radius: 16px; padding: 30px; box-shadow: 0 0 40px rgba(204, 0, 0, 0.3); }
+        .section-title { font-size: 20px; font-weight: 900; color: #ff3333; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .label { display: block; color: #ccc; font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+        .input, .select, .textarea { width: 100%; background: rgba(0, 0, 0, 0.5); border: 2px solid #333; color: #fff; padding: 15px; border-radius: 10px; font-size: 15px; font-family: 'Space Grotesk', sans-serif; transition: all 0.3s; }
+        .input:focus, .select:focus, .textarea:focus { outline: none; border-color: #cc0000; box-shadow: 0 0 20px rgba(204, 0, 0, 0.3); }
+        .textarea { min-height: 100px; resize: vertical; }
+        
+        .style-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .style-btn { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; color: #999; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; text-transform: uppercase; transition: all 0.3s; text-align: center; }
+        .style-btn:hover, .style-btn.active { border-color: #cc0000; color: #ff3333; background: rgba(204, 0, 0, 0.2); box-shadow: 0 0 20px rgba(204, 0, 0, 0.3); }
+        
+        .btn-generate { width: 100%; background: linear-gradient(135deg, #cc0000 0%, #ff3333 100%); border: none; color: #fff; padding: 20px; border-radius: 12px; font-size: 18px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: all 0.3s; box-shadow: 0 10px 30px rgba(204, 0, 0, 0.4); }
+        .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(204, 0, 0, 0.6); }
+        .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .copy-result { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; border-radius: 12px; padding: 25px; margin-bottom: 20px; font-size: 14px; line-height: 1.8; min-height: 200px; }
+        .copy-placeholder { color: #666; text-align: center; padding: 60px 20px; font-style: italic; }
+        
+        .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .score-card { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; border-radius: 10px; padding: 15px; text-align: center; }
+        .score-label { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+        .score-value { font-size: 32px; font-weight: 900; color: #ff3333; }
+        .score-bar { height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+        .score-fill { height: 100%; background: linear-gradient(90deg, #cc0000 0%, #ff3333 100%); width: 0%; transition: width 1s ease; }
+        
+        .narration-box { background: rgba(0, 255, 0, 0.05); border: 2px solid rgba(0, 255, 0, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .narration-title { color: #00ff00; font-size: 13px; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; }
+        .narration-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
+        .narration-metric { color: #999; font-size: 11px; font-weight: 700; margin-bottom: 5px; }
+        .narration-value { color: #00ff00; font-size: 20px; font-weight: 900; }
+        .narration-tip { background: rgba(0, 0, 0, 0.5); padding: 12px; border-radius: 8px; font-size: 12px; color: #ccc; }
+        
+        .action-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .btn-action { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; color: #fff; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
+        .btn-action:hover { border-color: #00ff00; color: #00ff00; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); }
+        
+        .database-section { background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%); border: 2px solid #cc0000; border-radius: 16px; padding: 30px; }
+        .database-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-btn { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; color: #999; padding: 10px 15px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
+        .filter-btn:hover, .filter-btn.active { border-color: #cc0000; color: #ff3333; }
+        
+        .copy-list { display: grid; gap: 15px; max-height: 500px; overflow-y: auto; }
+        .copy-item { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; border-radius: 10px; padding: 20px; transition: all 0.3s; cursor: pointer; }
+        .copy-item:hover { border-color: #cc0000; box-shadow: 0 0 20px rgba(204, 0, 0, 0.3); }
+        .copy-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .copy-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+        .badge { padding: 5px 12px; border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+        .badge-viral { background: #00ff00; color: #000; }
+        .badge-lang { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .badge-type { background: rgba(255, 51, 51, 0.2); color: #ff3333; border: 1px solid #ff3333; }
+        .copy-text { font-size: 13px; line-height: 1.6; color: #ccc; margin-bottom: 12px; }
+        .copy-stats { display: flex; gap: 20px; font-size: 11px; color: #666; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%); border: 2px solid #cc0000; border-radius: 16px; padding: 40px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-title { font-size: 24px; font-weight: 900; color: #ff3333; margin-bottom: 25px; }
+        
+        .loading { display: none; text-align: center; padding: 40px; }
+        .loading.active { display: block; }
+        .spinner { border: 4px solid rgba(204, 0, 0, 0.1); border-top: 4px solid #cc0000; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+        ::-webkit-scrollbar-thumb { background: #cc0000; border-radius: 5px; }
+        
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div class="title">🎙️ ALPHA COPY GENERATOR</div>
+                <div class="subtitle">IA + Otimização para Narração (ElevenLabs/Grok)</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="panel">
+                <div class="section-title">⚡ GERADOR</div>
+                
+                <div class="form-group">
+                    <label class="label">Tema / Produto</label>
+                    <input type="text" class="input" id="tema" placeholder="Ex: Método Alpha, Aumento Peniano...">
+                </div>
+                
+                <div class="form-group">
+                    <label class="label">Público-Alvo</label>
+                    <input type="text" class="input" id="publico" placeholder="Ex: Homens 25-45 anos...">
+                </div>
+                
+                <div class="form-group">
+                    <label class="label">Objetivo</label>
+                    <textarea class="textarea" id="objetivo" placeholder="Ex: Gerar cliques, vender..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="label">Tipo de Copy</label>
+                    <div class="style-grid">
+                        <button class="style-btn" data-style="agressiva">🔥 Agressiva</button>
+                        <button class="style-btn" data-style="viral">💥 Viral</button>
+                        <button class="style-btn active" data-style="conversao">💰 Conversão</button>
+                        <button class="style-btn" data-style="equilibrada">⚖️ Equilibrada</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="label">Formato</label>
+                    <select class="select" id="formato">
+                        <option value="boneco">🎭 Boneco (Adobe)</option>
+                        <option value="persona">👨‍⚕️ Persona (Médico/Grok)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="label">Plataforma TTS</label>
+                    <select class="select" id="tts">
+                        <option value="elevenlabs">🎙️ ElevenLabs</option>
+                        <option value="grok">🤖 Grok Voice</option>
+                        <option value="ambos">🔄 Otimizar Ambos</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="label">Tom de Voz</label>
+                    <select class="select" id="tom">
+                        <option value="casual">😎 Casual</option>
+                        <option value="autoridade">👨‍⚕️ Autoridade</option>
+                        <option value="urgente">⚡ Urgente</option>
+                        <option value="storytelling">📖 Storytelling</option>
+                        <option value="confessional">🤫 Confessional</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="label">Idioma</label>
+                    <select class="select" id="idioma">
+                        <option value="pt">🇧🇷 Português</option>
+                        <option value="es">🇪🇸 Espanhol</option>
+                        <option value="en">🇺🇸 Inglês</option>
+                    </select>
+                </div>
+                
+                <button class="btn-generate" onclick="generateCopy()">🚀 GERAR COPY</button>
+            </div>
+
+            <div class="panel">
+                <div class="section-title">📝 RESULTADO</div>
+                
+                <div class="copy-result" id="output">
+                    <div class="copy-placeholder">Sua copy aparecerá aqui...</div>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div style="color: #999;">Gerando com IA...</div>
+                </div>
+                
+                <div id="scores" style="display: none;">
+                    <div class="score-grid">
+                        <div class="score-card">
+                            <div class="score-label">Viral</div>
+                            <div class="score-value" id="sViral">0</div>
+                            <div class="score-bar"><div class="score-fill" id="bViral"></div></div>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-label">Conversão</div>
+                            <div class="score-value" id="sConv">0</div>
+                            <div class="score-bar"><div class="score-fill" id="bConv"></div></div>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-label">Engajamento</div>
+                            <div class="score-value" id="sEng">0</div>
+                            <div class="score-bar"><div class="score-fill" id="bEng"></div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="narration-box">
+                        <div class="narration-title">🎙️ MÉTRICAS NARRAÇÃO</div>
+                        <div class="narration-grid">
+                            <div>
+                                <div class="narration-metric">TEMPO</div>
+                                <div class="narration-value" id="nTime">0s</div>
+                            </div>
+                            <div>
+                                <div class="narration-metric">PALAVRAS</div>
+                                <div class="narration-value" id="nWords">0</div>
+                            </div>
+                            <div>
+                                <div class="narration-metric">SÍLABAS</div>
+                                <div class="narration-value" id="nSyll">0</div>
+                            </div>
+                            <div>
+                                <div class="narration-metric">PAUSAS</div>
+                                <div class="narration-value" id="nPause">0</div>
+                            </div>
+                        </div>
+                        <div class="narration-tip">
+                            <strong style="color: #00ff00;">💡 Ideal:</strong> TikTok 15-30s | Reels 30-60s | Shorts 30-60s
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn-action" onclick="copiar()">📋 Copiar</button>
+                        <button class="btn-action" onclick="copiarTTS()">🎙️ TTS</button>
+                        <button class="btn-action" onclick="salvar()">💾 Salvar</button>
+                        <button class="btn-action" onclick="regenerar()">🔄 Regerar</button>
+                        <button class="btn-action" onclick="exportTXT()">📤 TXT</button>
+                        <button class="btn-action" onclick="exportSSML()">🎙️ SSML</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="database-section">
+            <div class="section-title">🗄️ BANCO DE COPIES</div>
+            
+            <div class="database-controls">
+                <button class="filter-btn active" onclick="filter('todas')">Todas</button>
+                <button class="filter-btn" onclick="filter('virais')">🔥 Virais</button>
+                <button class="filter-btn" onclick="filter('conversao')">💰 Alta Conv.</button>
+                <button class="filter-btn" onclick="filter('boneco')">🎭 Boneco</button>
+                <button class="filter-btn" onclick="filter('persona')">👨‍⚕️ Persona</button>
+                <button class="filter-btn" onclick="importar()">📥 Importar</button>
+                <button class="filter-btn" onclick="exportAll()">📤 Exportar</button>
+            </div>
+            
+            <div class="copy-list" id="list"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-title">📥 IMPORTAR COPY</div>
+            <div class="form-group">
+                <label class="label">Texto</label>
+                <textarea class="textarea" id="iText" style="min-height: 150px;"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="label">Viralizou?</label>
+                <select class="select" id="iViral">
+                    <option value="sim">✅ Sim</option>
+                    <option value="nao">❌ Não</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="label">Tipo</label>
+                <select class="select" id="iTipo">
+                    <option value="boneco">🎭 Boneco</option>
+                    <option value="persona">👨‍⚕️ Persona</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="label">Idioma</label>
+                <select class="select" id="iIdioma">
+                    <option value="pt">🇧🇷 PT</option>
+                    <option value="es">🇪🇸 ES</option>
+                    <option value="en">🇺🇸 EN</option>
+                </select>
+            </div>
+            <div class="action-buttons" style="margin-top: 20px;">
+                <button class="btn-action" onclick="salvarImport()">💾 Salvar</button>
+                <button class="btn-action" onclick="fecharModal()">❌ Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const app = initializeApp({
+            apiKey: "AIzaSyB-GPkmK_iNQuu_96NsWBEmnZA1LhiSRR4",
+            authDomain: "alytics-metodo-alpha.firebaseapp.com",
+            projectId: "alytics-metodo-alpha",
+            storageBucket: "alytics-metodo-alpha.firebasestorage.app",
+            messagingSenderId: "389989039442",
+            appId: "1:389989039442:web:e897945ffbfe52da210e8b"
+        });
+
+        const db = getFirestore(app);
+        let currentCopy = null;
+        let allCopies = [];
+
+        document.querySelectorAll('.style-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        window.generateCopy = async function() {
+            const tema = document.getElementById('tema').value;
+            const publico = document.getElementById('publico').value;
+            const objetivo = document.getElementById('objetivo').value;
+            const estilo = document.querySelector('.style-btn.active').dataset.style;
+            const formato = document.getElementById('formato').value;
+            const tts = document.getElementById('tts').value;
+            const tom = document.getElementById('tom').value;
+            const idioma = document.getElementById('idioma').value;
+
+            if (!tema || !publico || !objetivo) { alert('Preencha todos campos!'); return; }
+
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('scores').style.display = 'none';
+
+            const lang = idioma === 'pt' ? 'português brasileiro' : idioma === 'es' ? 'espanhol' : 'inglês';
+            
+            const ttsMap = {
+                elevenlabs: 'Frases curtas e diretas. Evite vírgulas excessivas. Use pontos.',
+                grok: 'Linguagem natural e conversacional. Contrações (tá, né, pra).',
+                ambos: 'Balance formal e casual. Frases médias (10-15 palavras).'
+            };
+
+            const tomMap = {
+                casual: 'Fale como amigo. Use gírias leves. Tom descontraído.',
+                autoridade: 'Técnico mas acessível. Dados e fatos. Tom confiante.',
+                urgente: 'Frases impactantes curtas. Crie pressão. Tom intenso.',
+                storytelling: 'Conte história pessoal. Use eu/meu. Tom íntimo.',
+                confessional: 'Revele algo pessoal. Vulnerabilidade. Tom confidencial.'
+            };
+
+            try {
+                const res = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 1000,
+                        messages: [{
+                            role: "user",
+                            content: `Crie copy ${estilo} em ${lang} para ${formato === 'boneco' ? 'boneco Adobe' : 'persona médico'}.
+
+Tema: ${tema}
+Público: ${publico}
+Objetivo: ${objetivo}
+
+TTS: ${tts} - ${ttsMap[tts]}
+TOM: ${tom} - ${tomMap[tom]}
+
+REGRAS TEXT-TO-SPEECH:
+- Frases 8-15 palavras
+- Vírgulas = pausas naturais
+- Números por extenso (treze cm)
+- Emojis só fim de frase
+- Evite palavras difíceis
+- Quebra linha = pausa dramática
+- 15-45 segundos
+- Max 100 palavras
+
+APENAS a copy, sem explicações.`
+                        }]
+                    })
+                });
+
+                const data = await res.json();
+                const texto = data.content[0].text;
+
+                const clean = texto.replace(/[\u{1F300}-\u{1F9FF}]/gu, '');
+                const words = clean.trim().split(/\s+/).filter(w => w.length > 0);
+                const wordCount = words.length;
+                const syllables = words.reduce((t, w) => t + (w.match(/[aeiouáéíóúâêôãõ]/gi)?.length || 1), 0);
+                const pauses = (texto.match(/[,.\n]/g) || []).length;
+                const readingTime = Math.round((wordCount / 150) * 60);
+
+                let viral = 0, conversao = 0, engajamento = 0;
+                
+                if (texto.includes('?')) viral += 20;
+                if (texto.match(/[!🔥💥⚡]/g)) viral += 15;
+                if (texto.length < 100) viral += 15;
+                if (texto.includes('descobri') || texto.includes('segredo')) viral += 20;
+                viral += Math.floor(Math.random() * 30);
+
+                if (texto.includes('link') || texto.includes('bio')) conversao += 20;
+                if (texto.match(/\d+/g)) conversao += 15;
+                if (texto.includes('resultado') || texto.includes('garantia')) conversao += 20;
+                if (texto.includes('grátis') || texto.includes('hoje')) conversao += 15;
+                conversao += Math.floor(Math.random() * 30);
+
+                if (wordCount >= 30 && wordCount <= 100) engajamento += 30;
+                if (texto.includes('você')) engajamento += 20;
+                if (texto.split('\n').length > 1) engajamento += 15;
+                engajamento += Math.floor(Math.random() * 35);
+
+                if (estilo === 'viral') viral += 20;
+                if (estilo === 'conversao') conversao += 20;
+                if (estilo === 'agressiva') { viral += 10; conversao += 10; }
+                if (estilo === 'equilibrada') { viral += 10; conversao += 10; engajamento += 10; }
+
+                viral = Math.min(100, viral);
+                conversao = Math.min(100, conversao);
+                engajamento = Math.min(100, engajamento);
+
+                currentCopy = { texto, tema, publico, objetivo, estilo, formato, tts, tom, idioma, scores: { viral, conversao, engajamento }, narration: { wordCount, syllables, pauses, readingTime }, timestamp: new Date() };
+
+                document.getElementById('output').innerHTML = texto.replace(/\n/g, '<br>');
+                document.getElementById('scores').style.display = 'block';
+                
+                document.getElementById('sViral').textContent = viral;
+                document.getElementById('sConv').textContent = conversao;
+                document.getElementById('sEng').textContent = engajamento;
+                
+                document.getElementById('nTime').textContent = readingTime + 's';
+                document.getElementById('nWords').textContent = wordCount;
+                document.getElementById('nSyll').textContent = syllables;
+                document.getElementById('nPause').textContent = pauses;
+
+                setTimeout(() => {
+                    document.getElementById('bViral').style.width = viral + '%';
+                    document.getElementById('bConv').style.width = conversao + '%';
+                    document.getElementById('bEng').style.width = engajamento + '%';
+                }, 100);
+            } catch (err) {
+                alert('Erro: ' + err.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        };
+
+        window.copiar = () => { navigator.clipboard.writeText(currentCopy.texto); alert('✅ Copiado!'); };
+        
+        window.copiarTTS = () => {
+            const clean = currentCopy.texto.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/\*/g, '');
+            navigator.clipboard.writeText(clean);
+            alert('✅ Copiado (limpo pra TTS)!');
+        };
+
+        window.salvar = async () => {
+            if (!currentCopy) return;
+            try {
+                await addDoc(collection(db, 'copies'), { ...currentCopy, viral: false, timestamp: serverTimestamp() });
+                alert('✅ Salvo!');
+                loadCopies();
+            } catch (err) { alert('❌ Erro'); }
+        };
+
+        window.regenerar = () => generateCopy();
+
+        window.exportTXT = () => {
+            const blob = new Blob([currentCopy.texto], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `copy_${Date.now()}.txt`;
+            a.click();
+        };
+
+        window.exportSSML = () => {
+            let ssml = '<speak>\n';
+            const lines = currentCopy.texto.split('\n');
+            lines.forEach(line => {
+                if (line.trim()) ssml += `  <p>${line}</p>\n`;
+            });
+            ssml += '</speak>';
+            
+            const blob = new Blob([ssml], { type: 'text/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `copy_${Date.now()}.ssml`;
+            a.click();
+        };
+
+        window.importar = () => document.getElementById('modal').classList.add('active');
+        window.fecharModal = () => document.getElementById('modal').classList.remove('active');
+
+        window.salvarImport = async () => {
+            const texto = document.getElementById('iText').value;
+            const viral = document.getElementById('iViral').value === 'sim';
+            const formato = document.getElementById('iTipo').value;
+            const idioma = document.getElementById('iIdioma').value;
+
+            if (!texto) { alert('Digite texto!'); return; }
+
+            try {
+                await addDoc(collection(db, 'copies'), {
+                    texto, viral, formato, idioma,
+                    scores: { viral: 80, conversao: 70, engajamento: 75 },
+                    narration: { wordCount: texto.split(' ').length, syllables: 0, pauses: 0, readingTime: 30 },
+                    timestamp: serverTimestamp()
+                });
+                alert('✅ Importado!');
+                fecharModal();
+                document.getElementById('iText').value = '';
+                loadCopies();
+            } catch (err) { alert('❌ Erro'); }
+        };
+
+        async function loadCopies() {
+            try {
+                const q = query(collection(db, 'copies'), orderBy('timestamp', 'desc'));
+                const snap = await getDocs(q);
+                allCopies = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderCopies(allCopies);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderCopies(copies) {
+            const list = document.getElementById('list');
+            if (copies.length === 0) {
+                list.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Banco vazio...</div>';
+                return;
+            }
+
+            list.innerHTML = copies.map(c => {
+                const flag = c.idioma === 'pt' ? '🇧🇷' : c.idioma === 'es' ? '🇪🇸' : '🇺🇸';
+                const icon = c.formato === 'boneco' ? '🎭' : '👨‍⚕️';
+                return `
+                    <div class="copy-item">
+                        <div class="copy-item-header">
+                            <div class="copy-meta">
+                                ${c.viral ? '<span class="badge badge-viral">VIRAL</span>' : ''}
+                                <span class="badge badge-lang">${flag}</span>
+                                <span class="badge badge-type">${icon}</span>
+                            </div>
+                            <span style="color:#666;font-size:11px;">${c.timestamp ? new Date(c.timestamp.toDate()).toLocaleDateString() : ''}</span>
+                        </div>
+                        <div class="copy-text">${(c.texto || '').substring(0, 150)}...</div>
+                        <div class="copy-stats">
+                            <span>🔥 ${c.scores?.viral || 0}%</span>
+                            <span>💰 ${c.scores?.conversao || 0}%</span>
+                            <span>⚡ ${c.scores?.engajamento || 0}%</span>
+                            <span>⏱️ ${c.narration?.readingTime || 0}s</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.filter = (tipo) => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            let filtered = allCopies;
+            if (tipo === 'virais') filtered = allCopies.filter(c => c.viral);
+            if (tipo === 'conversao') filtered = allCopies.filter(c => c.scores?.conversao >= 70);
+            if (tipo === 'boneco') filtered = allCopies.filter(c => c.formato === 'boneco');
+            if (tipo === 'persona') filtered = allCopies.filter(c => c.formato === 'persona');
+
+            renderCopies(filtered);
+        };
+
+        window.exportAll = () => {
+            const data = JSON.stringify(allCopies, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `banco_copies_${Date.now()}.json`;
+            a.click();
+        };
+
+        loadCopies();
+    </script>
+</body>
+</html>
