@@ -1,580 +1,870 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alpha Copy Generator - IA + TTS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Space Grotesk', sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; }
-        
-        .header { background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%); border: 2px solid #cc0000; border-radius: 16px; padding: 40px; margin-bottom: 30px; position: relative; overflow: hidden; }
-        .header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(204, 0, 0, 0.2) 0%, transparent 70%); animation: pulse 3s ease-in-out infinite; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 0.8; } }
-        .header-content { position: relative; z-index: 1; }
-        .title { font-size: 48px; font-weight: 900; color: #ff3333; margin-bottom: 10px; text-shadow: 0 0 30px rgba(255, 51, 51, 0.5); letter-spacing: -2px; }
-        .subtitle { color: #999; font-size: 16px; font-weight: 600; }
-        
-        .main-grid { display: grid; grid-template-columns: 1fr 400px; gap: 30px; margin-bottom: 30px; }
-        .panel { background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%); border: 2px solid #cc0000; border-radius: 16px; padding: 30px; box-shadow: 0 0 40px rgba(204, 0, 0, 0.3); }
-        .section-title { font-size: 20px; font-weight: 900; color: #ff3333; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; }
-        
-        .form-group { margin-bottom: 20px; }
-        .label { display: block; color: #ccc; font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
-        .input, .select, .textarea { width: 100%; background: rgba(0, 0, 0, 0.5); border: 2px solid #333; color: #fff; padding: 15px; border-radius: 10px; font-size: 15px; font-family: 'Space Grotesk', sans-serif; transition: all 0.3s; }
-        .input:focus, .select:focus, .textarea:focus { outline: none; border-color: #cc0000; box-shadow: 0 0 20px rgba(204, 0, 0, 0.3); }
-        .textarea { min-height: 100px; resize: vertical; }
-        
-        .style-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .style-btn { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; color: #999; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; text-transform: uppercase; transition: all 0.3s; text-align: center; }
-        .style-btn:hover, .style-btn.active { border-color: #cc0000; color: #ff3333; background: rgba(204, 0, 0, 0.2); box-shadow: 0 0 20px rgba(204, 0, 0, 0.3); }
-        
-        .btn-generate { width: 100%; background: linear-gradient(135deg, #cc0000 0%, #ff3333 100%); border: none; color: #fff; padding: 20px; border-radius: 12px; font-size: 18px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: all 0.3s; box-shadow: 0 10px 30px rgba(204, 0, 0, 0.4); }
-        .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(204, 0, 0, 0.6); }
-        .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .copy-result { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; border-radius: 12px; padding: 25px; margin-bottom: 20px; font-size: 14px; line-height: 1.8; min-height: 200px; }
-        .copy-placeholder { color: #666; text-align: center; padding: 60px 20px; font-style: italic; }
-        
-        .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-        .score-card { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; border-radius: 10px; padding: 15px; text-align: center; }
-        .score-label { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 8px; }
-        .score-value { font-size: 32px; font-weight: 900; color: #ff3333; }
-        .score-bar { height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 10px; }
-        .score-fill { height: 100%; background: linear-gradient(90deg, #cc0000 0%, #ff3333 100%); width: 0%; transition: width 1s ease; }
-        
-        .narration-box { background: rgba(0, 255, 0, 0.05); border: 2px solid rgba(0, 255, 0, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        .narration-title { color: #00ff00; font-size: 13px; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; }
-        .narration-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
-        .narration-metric { color: #999; font-size: 11px; font-weight: 700; margin-bottom: 5px; }
-        .narration-value { color: #00ff00; font-size: 20px; font-weight: 900; }
-        .narration-tip { background: rgba(0, 0, 0, 0.5); padding: 12px; border-radius: 8px; font-size: 12px; color: #ccc; }
-        
-        .action-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .btn-action { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; color: #fff; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
-        .btn-action:hover { border-color: #00ff00; color: #00ff00; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); }
-        
-        .database-section { background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%); border: 2px solid #cc0000; border-radius: 16px; padding: 30px; }
-        .database-controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .filter-btn { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; color: #999; padding: 10px 15px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
-        .filter-btn:hover, .filter-btn.active { border-color: #cc0000; color: #ff3333; }
-        
-        .copy-list { display: grid; gap: 15px; max-height: 500px; overflow-y: auto; }
-        .copy-item { background: rgba(0, 0, 0, 0.5); border: 2px solid #333; border-radius: 10px; padding: 20px; transition: all 0.3s; cursor: pointer; }
-        .copy-item:hover { border-color: #cc0000; box-shadow: 0 0 20px rgba(204, 0, 0, 0.3); }
-        .copy-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .copy-meta { display: flex; gap: 10px; flex-wrap: wrap; }
-        .badge { padding: 5px 12px; border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
-        .badge-viral { background: #00ff00; color: #000; }
-        .badge-lang { background: rgba(255, 255, 255, 0.1); color: #fff; }
-        .badge-type { background: rgba(255, 51, 51, 0.2); color: #ff3333; border: 1px solid #ff3333; }
-        .copy-text { font-size: 13px; line-height: 1.6; color: #ccc; margin-bottom: 12px; }
-        .copy-stats { display: flex; gap: 20px; font-size: 11px; color: #666; }
-        
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1000; align-items: center; justify-content: center; }
-        .modal.active { display: flex; }
-        .modal-content { background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%); border: 2px solid #cc0000; border-radius: 16px; padding: 40px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
-        .modal-title { font-size: 24px; font-weight: 900; color: #ff3333; margin-bottom: 25px; }
-        
-        .loading { display: none; text-align: center; padding: 40px; }
-        .loading.active { display: block; }
-        .spinner { border: 4px solid rgba(204, 0, 0, 0.1); border-top: 4px solid #cc0000; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        ::-webkit-scrollbar { width: 10px; }
-        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
-        ::-webkit-scrollbar-thumb { background: #cc0000; border-radius: 5px; }
-        
-        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copy Engine — TOFU · MOFU · BOFU</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,500;0,700;1,300&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#08090b;--s1:#0d0f13;--s2:#12151b;--s3:#1a1e27;
+  --border:#1f2330;--border2:#2a2f3f;--text:#e8eaf0;--muted:#5a6070;--dim:#3a3f50;
+  --tofu:#3b82f6;--tofu-dim:rgba(59,130,246,.1);--tofu-glow:rgba(59,130,246,.3);
+  --mofu:#8b5cf6;--mofu-dim:rgba(139,92,246,.1);--mofu-glow:rgba(139,92,246,.3);
+  --bofu:#f59e0b;--bofu-dim:rgba(245,158,11,.1);--bofu-glow:rgba(245,158,11,.3);
+  --green:#22c55e;--green-dim:rgba(34,197,94,.1);
+  --red:#ef4444;--red-dim:rgba(239,68,68,.1);
+  --purple:#a855f7;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.6}
+
+/* ─ NAV TABS ─ */
+.nav{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:28px;position:sticky;top:0;z-index:50;background:var(--bg);padding-top:16px}
+.ntab{padding:10px 20px;font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;text-transform:uppercase;letter-spacing:.7px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;white-space:nowrap}
+.ntab.active{color:var(--text);border-bottom-color:var(--tofu)}
+.ntab.active.nb{border-bottom-color:var(--purple)}
+.ntab.active.nc{border-bottom-color:var(--green)}
+.page{display:none}.page.active{display:block}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px 40px;position:relative;z-index:1}
+
+/* ─ HEADER ─ */
+.hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:28px;flex-wrap:wrap;padding-top:8px}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--tofu);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.eyebrow::before{content:'';width:24px;height:1px;background:var(--tofu)}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(38px,6vw,68px);line-height:.92;letter-spacing:1px;color:#fff}
+h1 .t{color:var(--tofu)} h1 .m{color:var(--mofu)} h1 .b{color:var(--bofu)}
+.pills{display:flex;gap:7px;flex-wrap:wrap}
+.pill{padding:5px 12px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.pill.t{background:var(--tofu-dim);border:1px solid var(--tofu-glow);color:var(--tofu)}
+.pill.m{background:var(--mofu-dim);border:1px solid var(--mofu-glow);color:var(--mofu)}
+.pill.b{background:var(--bofu-dim);border:1px solid var(--bofu-glow);color:var(--bofu)}
+
+/* ─ FORM CARD ─ */
+.fc{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:14px}
+.ftitle{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.ftitle::after{content:'';flex:1;height:1px;background:var(--border)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.g1{margin-bottom:12px}
+@media(max-width:600px){.g2{grid-template-columns:1fr}}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.fld input,.fld textarea,.fld select{background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;resize:none;-webkit-appearance:none}
+.fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--tofu)}
+.fld input::placeholder,.fld textarea::placeholder{color:var(--dim)}
+.fld textarea{min-height:72px;line-height:1.6}
+
+/* ─ TAGS ─ */
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.tag{padding:6px 13px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border2);color:var(--muted);background:var(--s2);transition:all .15s;user-select:none}
+.tag.ap{border-color:var(--tofu);color:var(--tofu);background:var(--tofu-dim)}
+.tag.am{border-color:var(--mofu);color:var(--mofu);background:var(--mofu-dim)}
+.tag.ab{border-color:var(--bofu);color:var(--bofu);background:var(--bofu-dim)}
+
+/* ─ SIZE LEGEND ─ */
+.slg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.si{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.si.sc{border-top:2px solid var(--tofu)}.si.sm{border-top:2px solid var(--mofu)}.si.sl{border-top:2px solid var(--bofu)}
+.si-n{font-size:10px;font-weight:900;color:var(--text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.si-c{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
+.si-d{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.5}
+@media(max-width:480px){.slg{grid-template-columns:1fr}}
+
+/* ─ BUTTONS ─ */
+.btn{border:none;color:#fff;padding:11px 22px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:7px;transition:opacity .15s,transform .12s;letter-spacing:.2px}
+.btn:hover{opacity:.85;transform:translateY(-1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-gen{background:linear-gradient(135deg,var(--tofu),var(--mofu))}
+.btn-add{background:var(--green);color:#000}
+.btn-del{background:var(--red-dim);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:6px 11px;font-size:10px}
+.btn-edit{background:var(--tofu-dim);border:1px solid var(--tofu-glow);color:var(--tofu);padding:6px 11px;font-size:10px}
+.btn-use{background:var(--mofu-dim);border:1px solid var(--mofu-glow);color:var(--mofu);padding:6px 11px;font-size:10px}
+.btn-auto{background:linear-gradient(135deg,var(--purple),var(--bofu));font-size:13px}
+.btn-sm{padding:7px 14px;font-size:11px}
+.btn-ghost{background:var(--s2);border:1px solid var(--border2);color:var(--muted);padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;border-radius:7px;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
+.btn-ghost:hover{color:var(--text);border-color:var(--border)}
+
+.gr{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
+.ql{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.qs{background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:7px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer}
+
+/* ─ BANCO DE REFERÊNCIAS ─ */
+.ref-grid{display:flex;flex-direction:column;gap:9px;margin-bottom:14px}
+.ref-card{background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:13px 14px;position:relative}
+.ref-card.active-ref{border-color:var(--bofu);box-shadow:0 0 0 1px var(--bofu)}
+.ref-card-head{display:flex;align-items:center;gap:9px;margin-bottom:8px;flex-wrap:wrap}
+.ref-name{font-size:12px;font-weight:800;color:#fff;flex:1}
+.ref-badge{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px}
+.ref-badge.active{background:var(--bofu-dim);color:var(--bofu);border:1px solid var(--bofu-glow)}
+.ref-badge.inactive{background:var(--s3);color:var(--muted);border:1px solid var(--border)}
+.ref-text{font-size:12px;color:rgba(232,234,240,.75);line-height:1.7;font-style:italic;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ref-text.expanded{-webkit-line-clamp:unset}
+.ref-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.ref-chars{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px}
+
+/* ─ BANCO DE PRODUTOS ─ */
+.prod-grid{display:flex;flex-direction:column;gap:9px}
+.prod-card{background:var(--s2);border:1px solid var(--border2);border-radius:11px;overflow:hidden}
+.prod-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
+.prod-head:hover{background:rgba(255,255,255,.02)}
+.prod-title{font-size:13px;font-weight:800;color:#fff;flex:1}
+.prod-nicho{font-size:10px;color:var(--muted);flex-shrink:0}
+.prod-chev{font-size:10px;color:var(--dim);transition:transform .2s;flex-shrink:0}
+.prod-card.open .prod-chev{transform:rotate(180deg)}
+.prod-body{padding:0 14px;max-height:0;overflow:hidden;transition:max-height .3s,padding .25s}
+.prod-card.open .prod-body{max-height:600px;padding:0 14px 14px}
+.prod-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media(max-width:500px){.prod-fields{grid-template-columns:1fr}}
+.prod-field{background:var(--s3);border-radius:6px;padding:8px 10px}
+.prod-field-lbl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}
+.prod-field-val{font-size:11px;color:var(--text);line-height:1.5}
+.prod-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ─ MODAL ─ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:16px;padding:26px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.5px;color:#fff;margin-bottom:20px}
+.modal-footer{display:flex;gap:9px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ─ AUTO GENERATE PANEL ─ */
+.auto-panel{background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(245,158,11,.06));border:1px solid rgba(168,85,247,.2);border-radius:14px;padding:20px;margin-bottom:14px}
+.auto-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.5px;color:#fff;margin-bottom:6px}
+.auto-sub{font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.auto-config{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+@media(max-width:500px){.auto-config{grid-template-columns:1fr 1fr}}
+.auto-sel{background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:7px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer;width:100%}
+.auto-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.auto-progress{margin-top:14px;display:none}
+.auto-progress.on{display:block}
+.prog-bar-wrap{background:var(--border);border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--purple),var(--bofu));border-radius:4px;transition:width .4s}
+.prog-txt{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+.auto-log{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:10px;max-height:160px;overflow-y:auto}
+.log-line{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);line-height:1.8}
+.log-line.ok{color:var(--green)}
+.log-line.run{color:var(--tofu)}
+.log-line.err{color:var(--red)}
+
+/* ─ OUTPUT ─ */
+.oh{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.ot{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:#fff}
+.oc{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.oa{margin-left:auto;display:flex;gap:7px}
+.cg{display:flex;flex-direction:column;gap:10px}
+.cc{background:var(--s1);border:1px solid var(--border);border-radius:13px;overflow:hidden}
+.cc.ct{border-left:3px solid var(--tofu)}.cc.cm{border-left:3px solid var(--mofu)}.cc.cb{border-left:3px solid var(--bofu)}
+.ch2{display:flex;align-items:center;gap:9px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;flex-wrap:wrap}
+.cb2{display:flex;gap:5px;flex-shrink:0}
+.ct2{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.4px}
+.ct2.ct{background:var(--tofu-dim);color:var(--tofu);border:1px solid var(--tofu-glow)}
+.ct2.cm{background:var(--mofu-dim);color:var(--mofu);border:1px solid var(--mofu-glow)}
+.ct2.cb{background:var(--bofu-dim);color:var(--bofu);border:1px solid var(--bofu-glow)}
+.csb{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;text-transform:uppercase;border:1px solid var(--border2);color:var(--muted);background:var(--s2)}
+.csb.sc{border-color:rgba(59,130,246,.3);color:var(--tofu)}.csb.sm{border-color:rgba(139,92,246,.3);color:var(--mofu)}.csb.sl{border-color:rgba(245,158,11,.3);color:var(--bofu)}
+.cprod-tag{font-size:9px;color:var(--purple);background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);padding:2px 7px;border-radius:3px;font-weight:700;flex-shrink:0}
+.ck{font-size:12px;font-weight:700;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ccc{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);flex-shrink:0}
+.cv{font-size:11px;color:var(--dim);flex-shrink:0;transition:transform .2s}
+.cc.open .cv{transform:rotate(180deg)}
+.cbody{padding:0 15px;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .3s}
+.cc.open .cbody{max-height:2400px;padding:16px}
+.narr{font-size:15px;line-height:1.9;color:var(--text);white-space:pre-wrap;word-break:break-word;letter-spacing:.15px}
+.cbar{height:2px;border-radius:1px;margin-top:10px;background:var(--border)}
+.cfill{height:100%;border-radius:1px}
+.cft{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);align-items:center}
+.cm2{font-size:10px;color:var(--muted)}
+.ccb{margin-left:auto;background:var(--s2);border:1px solid var(--border2);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;text-transform:uppercase;transition:all .15s}
+.ccb:hover{border-color:var(--tofu);color:var(--tofu)}.ccb.cp{border-color:var(--green);color:var(--green)}
+
+/* LOADING */
+.ld{display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:50px 20px;text-align:center}
+.ld.on{display:flex}
+.lbars{display:flex;gap:5px;align-items:flex-end;height:30px}
+.bar{width:5px;border-radius:3px;animation:bp 1s ease-in-out infinite}
+.bar:nth-child(1){background:var(--tofu);animation-delay:0s}.bar:nth-child(2){background:var(--tofu);animation-delay:.1s}
+.bar:nth-child(3){background:var(--mofu);animation-delay:.2s}.bar:nth-child(4){background:var(--mofu);animation-delay:.3s}
+.bar:nth-child(5){background:var(--bofu);animation-delay:.4s}.bar:nth-child(6){background:var(--bofu);animation-delay:.5s}
+@keyframes bp{0%,100%{height:7px;opacity:.4}50%{height:30px;opacity:1}}
+.lt{font-size:13px;color:var(--muted);font-weight:500}
+.lp{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tofu);letter-spacing:1px;margin-top:4px}
+.es{text-align:center;padding:50px 20px;color:var(--muted)}
+.ei{font-size:44px;display:block;margin-bottom:10px;opacity:.4}
+.et{font-size:14px;font-weight:500}.ed{font-size:12px;margin-top:6px;opacity:.6;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.6}
+.sb2{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;padding:12px 16px;background:var(--s1);border:1px solid var(--border);border-radius:9px}
+.si2{display:flex;align-items:center;gap:6px}
+.sd{width:7px;height:7px;border-radius:50%}
+.sd.t{background:var(--tofu)}.sd.m{background:var(--mofu)}.sd.b{background:var(--bofu)}
+.stx{font-size:11px;color:var(--muted);font-weight:600}
+.sn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--text)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.badge-count{background:var(--mofu-dim);color:var(--mofu);border:1px solid var(--mofu-glow);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px}
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="header-content">
-                <div class="title">🎙️ ALPHA COPY GENERATOR</div>
-                <div class="subtitle">IA + Otimização para Narração (ElevenLabs/Grok)</div>
-            </div>
-        </div>
 
-        <div class="main-grid">
-            <div class="panel">
-                <div class="section-title">⚡ GERADOR</div>
-                
-                <div class="form-group">
-                    <label class="label">Tema / Produto</label>
-                    <input type="text" class="input" id="tema" placeholder="Ex: Método Alpha, Aumento Peniano...">
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">Público-Alvo</label>
-                    <input type="text" class="input" id="publico" placeholder="Ex: Homens 25-45 anos...">
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">Objetivo</label>
-                    <textarea class="textarea" id="objetivo" placeholder="Ex: Gerar cliques, vender..."></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">Tipo de Copy</label>
-                    <div class="style-grid">
-                        <button class="style-btn" data-style="agressiva">🔥 Agressiva</button>
-                        <button class="style-btn" data-style="viral">💥 Viral</button>
-                        <button class="style-btn active" data-style="conversao">💰 Conversão</button>
-                        <button class="style-btn" data-style="equilibrada">⚖️ Equilibrada</button>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">Formato</label>
-                    <select class="select" id="formato">
-                        <option value="boneco">🎭 Boneco (Adobe)</option>
-                        <option value="persona">👨‍⚕️ Persona (Médico/Grok)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">Plataforma TTS</label>
-                    <select class="select" id="tts">
-                        <option value="elevenlabs">🎙️ ElevenLabs</option>
-                        <option value="grok">🤖 Grok Voice</option>
-                        <option value="ambos">🔄 Otimizar Ambos</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">Tom de Voz</label>
-                    <select class="select" id="tom">
-                        <option value="casual">😎 Casual</option>
-                        <option value="autoridade">👨‍⚕️ Autoridade</option>
-                        <option value="urgente">⚡ Urgente</option>
-                        <option value="storytelling">📖 Storytelling</option>
-                        <option value="confessional">🤫 Confessional</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">Idioma</label>
-                    <select class="select" id="idioma">
-                        <option value="pt">🇧🇷 Português</option>
-                        <option value="es">🇪🇸 Espanhol</option>
-                        <option value="en">🇺🇸 Inglês</option>
-                    </select>
-                </div>
-                
-                <button class="btn-generate" onclick="generateCopy()">🚀 GERAR COPY</button>
-            </div>
+<!-- MODALS -->
+<div class="modal-bg" id="modal-ref">
+  <div class="modal">
+    <div class="modal-title" id="modal-ref-title">Nova Copy de Referência</div>
+    <div class="g1">
+      <div class="fld"><label>Nome / Identificação</label><input id="mr-nome" placeholder="Ex: Torre Eiffel — BOFU que viralizou"></div>
+    </div>
+    <div class="g1">
+      <div class="fld"><label>Texto da Copy *</label><textarea id="mr-texto" style="min-height:130px" placeholder="Cole aqui a copy completa…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ref')">Cancelar</button>
+      <button class="btn btn-add" onclick="saveRef()">✓ Salvar</button>
+    </div>
+  </div>
+</div>
 
-            <div class="panel">
-                <div class="section-title">📝 RESULTADO</div>
-                
-                <div class="copy-result" id="output">
-                    <div class="copy-placeholder">Sua copy aparecerá aqui...</div>
-                </div>
-                
-                <div class="loading" id="loading">
-                    <div class="spinner"></div>
-                    <div style="color: #999;">Gerando com IA...</div>
-                </div>
-                
-                <div id="scores" style="display: none;">
-                    <div class="score-grid">
-                        <div class="score-card">
-                            <div class="score-label">Viral</div>
-                            <div class="score-value" id="sViral">0</div>
-                            <div class="score-bar"><div class="score-fill" id="bViral"></div></div>
-                        </div>
-                        <div class="score-card">
-                            <div class="score-label">Conversão</div>
-                            <div class="score-value" id="sConv">0</div>
-                            <div class="score-bar"><div class="score-fill" id="bConv"></div></div>
-                        </div>
-                        <div class="score-card">
-                            <div class="score-label">Engajamento</div>
-                            <div class="score-value" id="sEng">0</div>
-                            <div class="score-bar"><div class="score-fill" id="bEng"></div></div>
-                        </div>
-                    </div>
-                    
-                    <div class="narration-box">
-                        <div class="narration-title">🎙️ MÉTRICAS NARRAÇÃO</div>
-                        <div class="narration-grid">
-                            <div>
-                                <div class="narration-metric">TEMPO</div>
-                                <div class="narration-value" id="nTime">0s</div>
-                            </div>
-                            <div>
-                                <div class="narration-metric">PALAVRAS</div>
-                                <div class="narration-value" id="nWords">0</div>
-                            </div>
-                            <div>
-                                <div class="narration-metric">SÍLABAS</div>
-                                <div class="narration-value" id="nSyll">0</div>
-                            </div>
-                            <div>
-                                <div class="narration-metric">PAUSAS</div>
-                                <div class="narration-value" id="nPause">0</div>
-                            </div>
-                        </div>
-                        <div class="narration-tip">
-                            <strong style="color: #00ff00;">💡 Ideal:</strong> TikTok 15-30s | Reels 30-60s | Shorts 30-60s
-                        </div>
-                    </div>
-                    
-                    <div class="action-buttons">
-                        <button class="btn-action" onclick="copiar()">📋 Copiar</button>
-                        <button class="btn-action" onclick="copiarTTS()">🎙️ TTS</button>
-                        <button class="btn-action" onclick="salvar()">💾 Salvar</button>
-                        <button class="btn-action" onclick="regenerar()">🔄 Regerar</button>
-                        <button class="btn-action" onclick="exportTXT()">📤 TXT</button>
-                        <button class="btn-action" onclick="exportSSML()">🎙️ SSML</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="modal-bg" id="modal-prod">
+  <div class="modal">
+    <div class="modal-title" id="modal-prod-title">Novo Produto</div>
+    <div class="g2">
+      <div class="fld"><label>Nome do Produto *</label><input id="mp-produto" placeholder="Ex: Protocolo Alpha Method"></div>
+      <div class="fld"><label>Nicho / Público *</label><input id="mp-nicho" placeholder="Ex: Homens 25–50"></div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label>Dor Principal *</label><input id="mp-dor" placeholder="Ex: Insegurança com tamanho"></div>
+      <div class="fld"><label>Resultado *</label><input id="mp-resultado" placeholder="Ex: Aumento real em semanas"></div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label>Mecanismo único</label><input id="mp-mecanismo" placeholder="Ex: Protocolo natural em casa"></div>
+      <div class="fld"><label>Objeção principal</label><input id="mp-objecao" placeholder='Ex: "É genética"'></div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label>Prova social</label><input id="mp-prova" placeholder="Ex: +4.700 homens já usaram"></div>
+      <div class="fld"><label>Urgência / Escassez</label><input id="mp-urgencia" placeholder="Ex: Pode ser removido a qualquer momento"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-prod')">Cancelar</button>
+      <button class="btn btn-add" onclick="saveProd()">✓ Salvar Produto</button>
+    </div>
+  </div>
+</div>
 
-        <div class="database-section">
-            <div class="section-title">🗄️ BANCO DE COPIES</div>
-            
-            <div class="database-controls">
-                <button class="filter-btn active" onclick="filter('todas')">Todas</button>
-                <button class="filter-btn" onclick="filter('virais')">🔥 Virais</button>
-                <button class="filter-btn" onclick="filter('conversao')">💰 Alta Conv.</button>
-                <button class="filter-btn" onclick="filter('boneco')">🎭 Boneco</button>
-                <button class="filter-btn" onclick="filter('persona')">👨‍⚕️ Persona</button>
-                <button class="filter-btn" onclick="importar()">📥 Importar</button>
-                <button class="filter-btn" onclick="exportAll()">📤 Exportar</button>
-            </div>
-            
-            <div class="copy-list" id="list"></div>
-        </div>
+<!-- APP -->
+<div class="wrap">
+
+  <div class="nav">
+    <button class="ntab active" onclick="goPage('p-gerador',this)">⚡ Gerador</button>
+    <button class="ntab nb" onclick="goPage('p-refs',this)">📚 Copies de Referência<span class="badge-count" id="badge-refs">0</span></button>
+    <button class="ntab nc" onclick="goPage('p-produtos',this)">🗂️ Banco de Produtos<span class="badge-count" id="badge-prods">0</span></button>
+    <button class="ntab" onclick="goPage('p-auto',this)">🤖 Geração Automática</button>
+  </div>
+
+  <!-- ═══ PAGE: GERADOR ═══ -->
+  <div class="page active" id="p-gerador">
+    <div class="hdr">
+      <div>
+        <div class="eyebrow">Copy Engine para Narração Oral</div>
+        <h1><span class="t">TOFU</span> · <span class="m">MOFU</span> · <span class="b">BOFU</span><br>GENERATOR</h1>
+      </div>
+      <div class="pills">
+        <div class="pill t">🔵 TOFU 50%</div>
+        <div class="pill m">🟣 MOFU 30%</div>
+        <div class="pill b">🟡 BOFU 20%</div>
+      </div>
     </div>
 
-    <div class="modal" id="modal">
-        <div class="modal-content">
-            <div class="modal-title">📥 IMPORTAR COPY</div>
-            <div class="form-group">
-                <label class="label">Texto</label>
-                <textarea class="textarea" id="iText" style="min-height: 150px;"></textarea>
-            </div>
-            <div class="form-group">
-                <label class="label">Viralizou?</label>
-                <select class="select" id="iViral">
-                    <option value="sim">✅ Sim</option>
-                    <option value="nao">❌ Não</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="label">Tipo</label>
-                <select class="select" id="iTipo">
-                    <option value="boneco">🎭 Boneco</option>
-                    <option value="persona">👨‍⚕️ Persona</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="label">Idioma</label>
-                <select class="select" id="iIdioma">
-                    <option value="pt">🇧🇷 PT</option>
-                    <option value="es">🇪🇸 ES</option>
-                    <option value="en">🇺🇸 EN</option>
-                </select>
-            </div>
-            <div class="action-buttons" style="margin-top: 20px;">
-                <button class="btn-action" onclick="salvarImport()">💾 Salvar</button>
-                <button class="btn-action" onclick="fecharModal()">❌ Fechar</button>
-            </div>
+    <div class="fc">
+      <!-- REFERÊNCIA ATIVA -->
+      <div class="ftitle">Copy de Referência Ativa</div>
+      <div id="active-ref-preview" style="background:var(--s3);border:1px solid var(--border2);border-left:3px solid var(--bofu);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:var(--bofu);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px" id="active-ref-name">TORRE EIFFEL (padrão)</div>
+        <div style="font-size:12px;color:rgba(232,234,240,.75);line-height:1.75;font-style:italic" id="active-ref-text">VAI CRESCER TANTO QUE VÃO CONFUNDIR COM A TORRE EIFFEL! Meu caro, não é mito nem teoria da conspiração. O Protocolo funciona. Esqueça a genética e todas as desculpas. Homens comuns estão usando um método natural e o resultado é garantido. Sem remédio caro sem cirurgia e sem bomba! É algo 100% natural feito em casa e que te entrega o aumento real e crescimento que você busca! Quer descobrir o segredo para ter essa escala? CORRE NO MEU PERFIL AGORA antes que essa chance seja removida!</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="goPage('p-refs',document.querySelectorAll('.ntab')[1])">📚 Trocar referência no banco</button>
+
+      <div class="divider"></div>
+
+      <!-- PRODUTO ATIVO -->
+      <div class="ftitle">Produto</div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <select class="qs" id="prod-sel" onchange="loadProdutoFromBanco()" style="flex:1;min-width:160px">
+          <option value="">— Preencher manualmente —</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="goPage('p-produtos',document.querySelectorAll('.ntab')[2])">🗂️ Gerenciar produtos</button>
+      </div>
+      <div id="form-produto">
+        <div class="g2">
+          <div class="fld"><label>Produto / Serviço *</label><input id="produto" placeholder="Ex: Protocolo natural de aumento peniano"></div>
+          <div class="fld"><label>Nicho / Público *</label><input id="nicho" placeholder="Ex: Homens 25–50 com insegurança"></div>
         </div>
+        <div class="g2">
+          <div class="fld"><label>Principal Dor *</label><input id="dor" placeholder="Ex: Se sente inseguro com o tamanho"></div>
+          <div class="fld"><label>Resultado / Transformação *</label><input id="resultado" placeholder="Ex: Aumento real em semanas em casa"></div>
+        </div>
+        <div class="g2">
+          <div class="fld"><label>Mecanismo único</label><input id="mecanismo" placeholder="Ex: Protocolo natural, sem remédio nem cirurgia"></div>
+          <div class="fld"><label>Objeção principal</label><input id="objecao" placeholder='Ex: "É genética, não tem jeito"'></div>
+        </div>
+        <div class="g2">
+          <div class="fld"><label>Prova social</label><input id="prova" placeholder="Ex: +4.700 homens já usaram"></div>
+          <div class="fld"><label>Urgência / Escassez</label><input id="urgencia" placeholder="Ex: Pode ser removido a qualquer momento"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- PLATAFORMA -->
+      <div class="ftitle">Plataforma</div>
+      <div class="tags" id="plats">
+        <div class="tag ap" data-v="TikTok">TikTok</div>
+        <div class="tag" data-v="Instagram Reels">Instagram Reels</div>
+        <div class="tag" data-v="YouTube Shorts">YouTube Shorts</div>
+        <div class="tag" data-v="Stories">Stories</div>
+      </div>
+
+      <!-- TOM -->
+      <div class="ftitle">Tom de Narração</div>
+      <div class="tags" id="tones">
+        <div class="tag am" data-v="Direto, urgente e provocativo">Direto e urgente</div>
+        <div class="tag" data-v="Chocante e polêmico, com afirmações que chocam">Chocante e polêmico</div>
+        <div class="tag" data-v="Empático e acolhedor, como um amigo que entende">Empático e acolhedor</div>
+        <div class="tag" data-v="Storytelling em 1ª pessoa com experiência pessoal">Storytelling pessoal</div>
+        <div class="tag" data-v="Educativo com autoridade científica">Educativo com autoridade</div>
+      </div>
+
+      <!-- TAMANHOS -->
+      <div class="ftitle">Formatos</div>
+      <div class="slg">
+        <div class="si sc"><div class="si-n">⚡ Curta</div><div class="si-c">~200–380 chars</div><div class="si-d">Máximo impacto. Alta viralização. Hook brutal + CTA direto.</div></div>
+        <div class="si sm"><div class="si-n">⚖️ Média</div><div class="si-c">~480–580 chars</div><div class="si-d">Equilíbrio ideal. Tensão progressiva + urgência no CTA.</div></div>
+        <div class="si sl"><div class="si-n">📖 Longa</div><div class="si-c">800+ chars</div><div class="si-d">Narração cinematográfica. Storytelling + quebra de objeção.</div></div>
+      </div>
+      <div class="tags" id="sizes">
+        <div class="tag ab" data-v="curta">⚡ Curta</div>
+        <div class="tag ab" data-v="media">⚖️ Média</div>
+        <div class="tag ab" data-v="longa">📖 Longa</div>
+      </div>
+
+      <div class="gr">
+        <button class="btn btn-gen" id="gbtn" onclick="gerar()">⚡ Gerar Copies</button>
+        <span class="ql">Quantidade</span>
+        <select class="qs" id="qty"><option value="6">6</option><option value="9" selected>9</option><option value="12">12</option><option value="18">18</option></select>
+      </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    <div class="ld" id="ld">
+      <div class="lbars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+      <div><div class="lt">Criando roteiros de narração…</div><div class="lp" id="lp">Calibrando tom e ritmo…</div></div>
+    </div>
+    <div id="out">
+      <div class="es" id="es"><span class="ei">🎙️</span><div class="et">Configure e clique em Gerar</div><div class="ed">Copies de narração em voz alta — proporção 50/30/20 nos 3 tamanhos</div></div>
+    </div>
+  </div>
 
-        const app = initializeApp({
-            apiKey: "AIzaSyB-GPkmK_iNQuu_96NsWBEmnZA1LhiSRR4",
-            authDomain: "alytics-metodo-alpha.firebaseapp.com",
-            projectId: "alytics-metodo-alpha",
-            storageBucket: "alytics-metodo-alpha.firebasestorage.app",
-            messagingSenderId: "389989039442",
-            appId: "1:389989039442:web:e897945ffbfe52da210e8b"
-        });
+  <!-- ═══ PAGE: BANCO DE REFERÊNCIAS ═══ -->
+  <div class="page" id="p-refs">
+    <div class="hdr" style="margin-bottom:20px">
+      <div><div class="eyebrow">Banco de Referências</div><h1 style="font-size:42px">COPIES<br>DE REFERÊNCIA</h1></div>
+      <button class="btn btn-add" onclick="openModalRef()">+ Nova Copy</button>
+    </div>
+    <div class="fc">
+      <div class="ftitle">Suas Copies de Referência</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Adicione copies suas que viralizaram ou performaram bem. A IA usa a copy <strong style="color:var(--bofu)">ativa</strong> como base para calibrar ritmo, tom e estrutura das novas copies geradas.</div>
+      <div id="refs-list"><div class="es" style="padding:30px"><span class="ei" style="font-size:32px">📄</span><div class="et">Nenhuma copy ainda</div><div class="ed">Clique em "+ Nova Copy" para adicionar</div></div></div>
+    </div>
+  </div>
 
-        const db = getFirestore(app);
-        let currentCopy = null;
-        let allCopies = [];
+  <!-- ═══ PAGE: BANCO DE PRODUTOS ═══ -->
+  <div class="page" id="p-produtos">
+    <div class="hdr" style="margin-bottom:20px">
+      <div><div class="eyebrow">Banco de Produtos</div><h1 style="font-size:42px">BANCO DE<br>PRODUTOS</h1></div>
+      <button class="btn btn-add" onclick="openModalProd()">+ Novo Produto</button>
+    </div>
+    <div class="fc">
+      <div class="ftitle">Seus Produtos Cadastrados</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Cadastre seus produtos uma vez. Na aba Gerador, selecione o produto para preencher os campos automaticamente. Na Geração Automática, a IA gera copies para todos os produtos de uma vez.</div>
+      <div id="prods-list"><div class="es" style="padding:30px"><span class="ei" style="font-size:32px">📦</span><div class="et">Nenhum produto ainda</div><div class="ed">Clique em "+ Novo Produto" para cadastrar</div></div></div>
+    </div>
+  </div>
 
-        document.querySelectorAll('.style-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
+  <!-- ═══ PAGE: GERAÇÃO AUTOMÁTICA ═══ -->
+  <div class="page" id="p-auto">
+    <div class="hdr" style="margin-bottom:20px">
+      <div><div class="eyebrow">Geração Automática</div><h1 style="font-size:42px">AUTO<br>GENERATE</h1></div>
+    </div>
 
-        window.generateCopy = async function() {
-            const tema = document.getElementById('tema').value;
-            const publico = document.getElementById('publico').value;
-            const objetivo = document.getElementById('objetivo').value;
-            const estilo = document.querySelector('.style-btn.active').dataset.style;
-            const formato = document.getElementById('formato').value;
-            const tts = document.getElementById('tts').value;
-            const tom = document.getElementById('tom').value;
-            const idioma = document.getElementById('idioma').value;
+    <div class="auto-panel">
+      <div class="auto-title">🤖 Gerar copies para todos os produtos do banco</div>
+      <div class="auto-sub">Selecione as configurações abaixo e a IA vai gerar automaticamente copies para cada produto cadastrado no seu banco, usando a copy de referência ativa.</div>
+      <div class="auto-config">
+        <div>
+          <div class="auto-lbl">Copies por produto</div>
+          <select class="auto-sel" id="auto-qty"><option value="3">3 copies</option><option value="6" selected>6 copies</option><option value="9">9 copies</option></select>
+        </div>
+        <div>
+          <div class="auto-lbl">Tom de narração</div>
+          <select class="auto-sel" id="auto-tone">
+            <option value="Direto, urgente e provocativo">Direto e urgente</option>
+            <option value="Chocante e polêmico, com afirmações que chocam">Chocante e polêmico</option>
+            <option value="Empático e acolhedor, como um amigo que entende">Empático e acolhedor</option>
+            <option value="Storytelling em 1ª pessoa com experiência pessoal">Storytelling pessoal</option>
+          </select>
+        </div>
+        <div>
+          <div class="auto-lbl">Plataforma</div>
+          <select class="auto-sel" id="auto-plat">
+            <option value="TikTok">TikTok</option>
+            <option value="Instagram Reels">Instagram Reels</option>
+            <option value="YouTube Shorts">YouTube Shorts</option>
+          </select>
+        </div>
+      </div>
+      <div id="auto-prod-count" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
+      <button class="btn btn-auto" id="auto-btn" onclick="gerarAuto()">🤖 Iniciar Geração Automática</button>
 
-            if (!tema || !publico || !objetivo) { alert('Preencha todos campos!'); return; }
+      <div class="auto-progress" id="auto-progress">
+        <div class="prog-bar-wrap"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
+        <div class="prog-txt" id="prog-txt">Preparando…</div>
+        <div class="auto-log" id="auto-log"></div>
+      </div>
+    </div>
 
-            document.getElementById('loading').classList.add('active');
-            document.getElementById('scores').style.display = 'none';
+    <div id="auto-out"></div>
+  </div>
 
-            const lang = idioma === 'pt' ? 'português brasileiro' : idioma === 'es' ? 'espanhol' : 'inglês';
-            
-            const ttsMap = {
-                elevenlabs: 'Frases curtas e diretas. Evite vírgulas excessivas. Use pontos.',
-                grok: 'Linguagem natural e conversacional. Contrações (tá, né, pra).',
-                ambos: 'Balance formal e casual. Frases médias (10-15 palavras).'
-            };
+</div><!-- /wrap -->
 
-            const tomMap = {
-                casual: 'Fale como amigo. Use gírias leves. Tom descontraído.',
-                autoridade: 'Técnico mas acessível. Dados e fatos. Tom confiante.',
-                urgente: 'Frases impactantes curtas. Crie pressão. Tom intenso.',
-                storytelling: 'Conte história pessoal. Use eu/meu. Tom íntimo.',
-                confessional: 'Revele algo pessoal. Vulnerabilidade. Tom confidencial.'
-            };
+<script>
+/* ═══════════════════════════════════════════
+   STATE — tudo em memória (localStorage indisponível)
+═══════════════════════════════════════════ */
+const API_KEY = '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';
 
-            try {
-                const res = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 1000,
-                        messages: [{
-                            role: "user",
-                            content: `Crie copy ${estilo} em ${lang} para ${formato === 'boneco' ? 'boneco Adobe' : 'persona médico'}.
+const DEFAULT_REF = {
+  id:'default', nome:'Torre Eiffel (padrão)',
+  texto:'VAI CRESCER TANTO QUE VÃO CONFUNDIR COM A TORRE EIFFEL! Meu caro, não é mito nem teoria da conspiração. O Protocolo funciona. Esqueça a genética e todas as desculpas. Homens comuns estão usando um método natural e o resultado é garantido. Sem remédio caro sem cirurgia e sem bomba! É algo 100% natural feito em casa e que te entrega o aumento real e crescimento que você busca! Quer descobrir o segredo para ter essa escala? CORRE NO MEU PERFIL AGORA antes que essa chance seja removida!',
+  active:true
+};
 
-Tema: ${tema}
-Público: ${publico}
-Objetivo: ${objetivo}
+let refs = [DEFAULT_REF];  // array de {id, nome, texto, active}
+let prods = [];             // array de {id, produto, nicho, dor, resultado, mecanismo, objecao, prova, urgencia}
+let editingRefId = null;
+let editingProdId = null;
 
-TTS: ${tts} - ${ttsMap[tts]}
-TOM: ${tom} - ${tomMap[tom]}
+/* ═══ NAV ═══ */
+function goPage(pageId, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  btn.classList.add('active');
+  if(pageId==='p-auto') updateAutoProdCount();
+}
 
-REGRAS TEXT-TO-SPEECH:
-- Frases 8-15 palavras
-- Vírgulas = pausas naturais
-- Números por extenso (treze cm)
-- Emojis só fim de frase
-- Evite palavras difíceis
-- Quebra linha = pausa dramática
-- 15-45 segundos
-- Max 100 palavras
+/* ═══ SELECTORS ═══ */
+let selPlatforms=['TikTok'], selTone='Direto, urgente e provocativo', selSizes=new Set(['curta','media','longa']);
+document.querySelectorAll('#plats .tag').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const v=el.dataset.v;
+    if(el.classList.contains('ap')){ if(selPlatforms.length===1)return; el.classList.remove('ap'); selPlatforms=selPlatforms.filter(p=>p!==v); }
+    else { el.classList.add('ap'); selPlatforms.push(v); }
+  });
+});
+document.querySelectorAll('#tones .tag').forEach(el=>{
+  el.addEventListener('click',()=>{ document.querySelectorAll('#tones .tag').forEach(t=>t.classList.remove('am')); el.classList.add('am'); selTone=el.dataset.v; });
+});
+document.querySelectorAll('#sizes .tag').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const v=el.dataset.v;
+    if(el.classList.contains('ab')){ if(selSizes.size===1)return; el.classList.remove('ab'); selSizes.delete(v); }
+    else { el.classList.add('ab'); selSizes.add(v); }
+  });
+});
 
-APENAS a copy, sem explicações.`
-                        }]
-                    })
-                });
+/* ═══ BANCO DE REFERÊNCIAS ═══ */
+function openModalRef(id=null){
+  editingRefId=id;
+  if(id){
+    const r=refs.find(x=>x.id===id);
+    document.getElementById('modal-ref-title').textContent='Editar Copy';
+    document.getElementById('mr-nome').value=r.nome;
+    document.getElementById('mr-texto').value=r.texto;
+  } else {
+    document.getElementById('modal-ref-title').textContent='Nova Copy de Referência';
+    document.getElementById('mr-nome').value='';
+    document.getElementById('mr-texto').value='';
+  }
+  document.getElementById('modal-ref').classList.add('open');
+}
+function saveRef(){
+  const nome=document.getElementById('mr-nome').value.trim()||'Copy sem nome';
+  const texto=document.getElementById('mr-texto').value.trim();
+  if(!texto){ document.getElementById('mr-texto').style.borderColor='var(--red)'; setTimeout(()=>document.getElementById('mr-texto').style.borderColor='',2000); return; }
+  if(editingRefId){
+    const idx=refs.findIndex(x=>x.id===editingRefId);
+    if(idx>-1){ refs[idx].nome=nome; refs[idx].texto=texto; }
+  } else {
+    refs.push({id:'r'+Date.now(), nome, texto, active:false});
+  }
+  closeModal('modal-ref'); renderRefs(); updateActiveRefPreview();
+}
+function deleteRef(id){
+  if(refs.length<=1){ alert('Mantenha pelo menos 1 copy de referência.'); return; }
+  refs=refs.filter(x=>x.id!==id);
+  if(!refs.some(r=>r.active)) refs[0].active=true;
+  renderRefs(); updateActiveRefPreview();
+}
+function setActiveRef(id){
+  refs.forEach(r=>r.active=false);
+  const r=refs.find(x=>x.id===id);
+  if(r) r.active=true;
+  renderRefs(); updateActiveRefPreview();
+}
+function getActiveRef(){ return refs.find(r=>r.active)||refs[0]; }
+function updateActiveRefPreview(){
+  const r=getActiveRef();
+  document.getElementById('active-ref-name').textContent=r.nome.toUpperCase();
+  document.getElementById('active-ref-text').textContent=r.texto;
+}
+function renderRefs(){
+  const el=document.getElementById('refs-list');
+  document.getElementById('badge-refs').textContent=refs.length;
+  if(!refs.length){ el.innerHTML='<div class="es" style="padding:30px"><span class="ei" style="font-size:32px">📄</span><div class="et">Nenhuma copy ainda</div></div>'; return; }
+  el.innerHTML=refs.map(r=>`
+    <div class="ref-card${r.active?' active-ref':''}">
+      <div class="ref-card-head">
+        <span class="ref-name">${esc(r.nome)}</span>
+        <span class="ref-badge ${r.active?'active':'inactive'}">${r.active?'✦ ATIVA':'inativa'}</span>
+      </div>
+      <div class="ref-text" id="rt-${r.id}">${esc(r.texto)}</div>
+      <div class="ref-chars">${r.texto.length} caracteres</div>
+      <div class="ref-actions">
+        ${!r.active?`<button class="btn btn-use btn-sm" onclick="setActiveRef('${r.id}')">✦ Usar esta</button>`:''}
+        <button class="btn btn-edit btn-sm" onclick="openModalRef('${r.id}')">✏️ Editar</button>
+        ${r.id!=='default'?`<button class="btn btn-del btn-sm" onclick="deleteRef('${r.id}')">🗑 Excluir</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="toggleRefText('${r.id}')">${document.getElementById('rt-'+r.id)?.classList.contains('expanded')?'↑ Recolher':'↓ Ver tudo'}</button>
+      </div>
+    </div>`).join('');
+}
+function toggleRefText(id){
+  const el=document.getElementById('rt-'+id);
+  if(el){ el.classList.toggle('expanded'); renderRefs(); }
+}
 
-                const data = await res.json();
-                const texto = data.content[0].text;
+/* ═══ BANCO DE PRODUTOS ═══ */
+function openModalProd(id=null){
+  editingProdId=id;
+  const fields=['produto','nicho','dor','resultado','mecanismo','objecao','prova','urgencia'];
+  if(id){
+    const p=prods.find(x=>x.id===id);
+    document.getElementById('modal-prod-title').textContent='Editar Produto';
+    fields.forEach(f=>{ document.getElementById('mp-'+f).value=p[f]||''; });
+  } else {
+    document.getElementById('modal-prod-title').textContent='Novo Produto';
+    fields.forEach(f=>{ document.getElementById('mp-'+f).value=''; });
+  }
+  document.getElementById('modal-prod').classList.add('open');
+}
+function saveProd(){
+  const fields=['produto','nicho','dor','resultado','mecanismo','objecao','prova','urgencia'];
+  const produto=document.getElementById('mp-produto').value.trim();
+  const nicho=document.getElementById('mp-nicho').value.trim();
+  if(!produto||!nicho){
+    ['mp-produto','mp-nicho'].forEach(id=>{const el=document.getElementById(id);if(!el.value.trim()){el.style.borderColor='var(--red)';setTimeout(()=>el.style.borderColor='',2000);}});
+    return;
+  }
+  const data={};
+  fields.forEach(f=>{ data[f]=document.getElementById('mp-'+f).value.trim(); });
+  if(editingProdId){
+    const idx=prods.findIndex(x=>x.id===editingProdId);
+    if(idx>-1) prods[idx]={...prods[idx],...data};
+  } else {
+    prods.push({id:'p'+Date.now(),...data});
+  }
+  closeModal('modal-prod'); renderProds(); updateProdSel();
+}
+function deleteProd(id){ prods=prods.filter(x=>x.id!==id); renderProds(); updateProdSel(); }
+function renderProds(){
+  const el=document.getElementById('prods-list');
+  document.getElementById('badge-prods').textContent=prods.length;
+  if(!prods.length){ el.innerHTML='<div class="es" style="padding:30px"><span class="ei" style="font-size:32px">📦</span><div class="et">Nenhum produto ainda</div></div>'; return; }
+  el.innerHTML=`<div class="prod-grid">${prods.map(p=>`
+    <div class="prod-card" id="pc-${p.id}">
+      <div class="prod-head" onclick="toggleProd('${p.id}')">
+        <span class="prod-title">${esc(p.produto)}</span>
+        <span class="prod-nicho">${esc(p.nicho)}</span>
+        <span class="prod-chev">▼</span>
+      </div>
+      <div class="prod-body">
+        <div class="prod-fields">
+          <div class="prod-field"><div class="prod-field-lbl">Dor</div><div class="prod-field-val">${esc(p.dor||'—')}</div></div>
+          <div class="prod-field"><div class="prod-field-lbl">Resultado</div><div class="prod-field-val">${esc(p.resultado||'—')}</div></div>
+          <div class="prod-field"><div class="prod-field-lbl">Mecanismo</div><div class="prod-field-val">${esc(p.mecanismo||'—')}</div></div>
+          <div class="prod-field"><div class="prod-field-lbl">Objeção</div><div class="prod-field-val">${esc(p.objecao||'—')}</div></div>
+          <div class="prod-field"><div class="prod-field-lbl">Prova social</div><div class="prod-field-val">${esc(p.prova||'—')}</div></div>
+          <div class="prod-field"><div class="prod-field-lbl">Urgência</div><div class="prod-field-val">${esc(p.urgencia||'—')}</div></div>
+        </div>
+        <div class="prod-actions">
+          <button class="btn btn-use btn-sm" onclick="usarProd('${p.id}')">⚡ Usar no Gerador</button>
+          <button class="btn btn-edit btn-sm" onclick="openModalProd('${p.id}')">✏️ Editar</button>
+          <button class="btn btn-del btn-sm" onclick="deleteProd('${p.id}')">🗑 Excluir</button>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+function toggleProd(id){ document.getElementById('pc-'+id)?.classList.toggle('open'); }
+function usarProd(id){
+  loadProdFields(id);
+  goPage('p-gerador', document.querySelectorAll('.ntab')[0]);
+  document.getElementById('prod-sel').value=id;
+}
+function loadProdFields(id){
+  const p=prods.find(x=>x.id===id); if(!p) return;
+  ['produto','nicho','dor','resultado','mecanismo','objecao','prova','urgencia'].forEach(f=>{
+    const el=document.getElementById(f); if(el) el.value=p[f]||'';
+  });
+}
+function loadProdutoFromBanco(){
+  const id=document.getElementById('prod-sel').value;
+  if(id) loadProdFields(id);
+}
+function updateProdSel(){
+  const sel=document.getElementById('prod-sel');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Preencher manualmente —</option>'+prods.map(p=>`<option value="${p.id}">${esc(p.produto)}</option>`).join('');
+  sel.value=cur;
+}
+function updateAutoProdCount(){
+  document.getElementById('auto-prod-count').textContent=prods.length>0?`${prods.length} produto(s) cadastrado(s) no banco`:'⚠️ Nenhum produto no banco. Cadastre produtos primeiro na aba "Banco de Produtos".';
+}
 
-                const clean = texto.replace(/[\u{1F300}-\u{1F9FF}]/gu, '');
-                const words = clean.trim().split(/\s+/).filter(w => w.length > 0);
-                const wordCount = words.length;
-                const syllables = words.reduce((t, w) => t + (w.match(/[aeiouáéíóúâêôãõ]/gi)?.length || 1), 0);
-                const pauses = (texto.match(/[,.\n]/g) || []).length;
-                const readingTime = Math.round((wordCount / 150) * 60);
+/* ═══ MODAL HELPERS ═══ */
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>{ m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }); });
 
-                let viral = 0, conversao = 0, engajamento = 0;
-                
-                if (texto.includes('?')) viral += 20;
-                if (texto.match(/[!🔥💥⚡]/g)) viral += 15;
-                if (texto.length < 100) viral += 15;
-                if (texto.includes('descobri') || texto.includes('segredo')) viral += 20;
-                viral += Math.floor(Math.random() * 30);
+/* ═══ LOADING PHASES ═══ */
+const PH=['Calibrando tom e ritmo…','Construindo hooks TOFU…','Desenvolvendo argumentos MOFU…','Afiando CTAs de conversão BOFU…','Ajustando tamanhos curta/média/longa…','Refinando ritmo de narração oral…','Polindo cada frase…','Quase pronto…'];
+let pi=0,pt=null;
+const startPh=()=>{pi=0;document.getElementById('lp').textContent=PH[0];pt=setInterval(()=>{pi=(pi+1)%PH.length;document.getElementById('lp').textContent=PH[pi];},1800);};
+const stopPh=()=>clearInterval(pt);
 
-                if (texto.includes('link') || texto.includes('bio')) conversao += 20;
-                if (texto.match(/\d+/g)) conversao += 15;
-                if (texto.includes('resultado') || texto.includes('garantia')) conversao += 20;
-                if (texto.includes('grátis') || texto.includes('hoje')) conversao += 15;
-                conversao += Math.floor(Math.random() * 30);
+/* ═══ PROMPT BUILDER ═══ */
+function buildPrompt(p, qty, tone, platforms, sizesArr){
+  const nT=Math.round(qty*.5), nM=Math.round(qty*.3), nB=qty-nT-nM;
+  const sizeList=Array.from({length:qty},(_,i)=>sizesArr[i%sizesArr.length]);
+  const activeRef=getActiveRef();
+  const sizeRules={
+    curta:`CURTA (200–380 chars): Hook em MAIÚSCULAS + 2-3 frases curtas de tensão + CTA urgente de 1 linha.`,
+    media:`MÉDIA (480–580 chars): Hook impactante + 3-4 frases de tensão crescente + prova/mecanismo + CTA urgente.`,
+    longa:`LONGA (800+ chars): Hook poderoso + storytelling/revelações + quebra de objeção + prova social + CTA elaborado.`
+  };
+  const sizesUsed=new Set(sizeList);
+  return `Você é um copywriter expert em roteiros de narração para ${platforms.join(' e ')}.
 
-                if (wordCount >= 30 && wordCount <= 100) engajamento += 30;
-                if (texto.includes('você')) engajamento += 20;
-                if (texto.split('\n').length > 1) engajamento += 15;
-                engajamento += Math.floor(Math.random() * 35);
+COPY DE REFERÊNCIA (imite o estilo, ritmo e estrutura):
+"${activeRef.texto}"
 
-                if (estilo === 'viral') viral += 20;
-                if (estilo === 'conversao') conversao += 20;
-                if (estilo === 'agressiva') { viral += 10; conversao += 10; }
-                if (estilo === 'equilibrada') { viral += 10; conversao += 10; engajamento += 10; }
+Capture: ritmo (frases curtíssimas que "batem"), MAIÚSCULAS estratégicas, estrutura (hook polêmico → tensão → mecanismo → CTA urgente), linguagem coloquial, texto FALADO.
 
-                viral = Math.min(100, viral);
-                conversao = Math.min(100, conversao);
-                engajamento = Math.min(100, engajamento);
+PRODUTO: ${p.produto}
+NICHO: ${p.nicho}
+DOR: ${p.dor}
+RESULTADO: ${p.resultado}
+MECANISMO: ${p.mecanismo||'não informado'}
+OBJEÇÃO: ${p.objecao||'não informada'}
+PROVA: ${p.prova||'não informada'}
+URGÊNCIA: ${p.urgencia||'não informada'}
+TOM: ${tone}
 
-                currentCopy = { texto, tema, publico, objetivo, estilo, formato, tts, tom, idioma, scores: { viral, conversao, engajamento }, narration: { wordCount, syllables, pauses, readingTime }, timestamp: new Date() };
+GERE ${qty} copies: ${nT} TOFU + ${nM} MOFU + ${nB} BOFU
+Tamanhos: ${sizeList.map((s,i)=>`copy ${i+1}=${s}`).join(', ')}
+${Array.from(sizesUsed).map(s=>sizeRules[s]).join('\n')}
 
-                document.getElementById('output').innerHTML = texto.replace(/\n/g, '<br>');
-                document.getElementById('scores').style.display = 'block';
-                
-                document.getElementById('sViral').textContent = viral;
-                document.getElementById('sConv').textContent = conversao;
-                document.getElementById('sEng').textContent = engajamento;
-                
-                document.getElementById('nTime').textContent = readingTime + 's';
-                document.getElementById('nWords').textContent = wordCount;
-                document.getElementById('nSyll').textContent = syllables;
-                document.getElementById('nPause').textContent = pauses;
+REGRAS: TOFU nunca menciona produto/preço. Hooks radicalmente diferentes. Português coloquial. MAIÚSCULAS só para ênfase oral.
 
-                setTimeout(() => {
-                    document.getElementById('bViral').style.width = viral + '%';
-                    document.getElementById('bConv').style.width = conversao + '%';
-                    document.getElementById('bEng').style.width = engajamento + '%';
-                }, 100);
-            } catch (err) {
-                alert('Erro: ' + err.message);
-            } finally {
-                document.getElementById('loading').classList.remove('active');
-            }
-        };
+FORMATO — JSON puro, sem markdown:
+{"copies":[{"tipo":"TOFU","tamanho":"curta","plataforma":"${platforms[0]}","hook":"3-6 palavras","narracao":"texto completo"}]}
 
-        window.copiar = () => { navigator.clipboard.writeText(currentCopy.texto); alert('✅ Copiado!'); };
-        
-        window.copiarTTS = () => {
-            const clean = currentCopy.texto.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/\*/g, '');
-            navigator.clipboard.writeText(clean);
-            alert('✅ Copiado (limpo pra TTS)!');
-        };
+EXATAMENTE ${qty} objetos.`;
+}
 
-        window.salvar = async () => {
-            if (!currentCopy) return;
-            try {
-                await addDoc(collection(db, 'copies'), { ...currentCopy, viral: false, timestamp: serverTimestamp() });
-                alert('✅ Salvo!');
-                loadCopies();
-            } catch (err) { alert('❌ Erro'); }
-        };
+/* ═══ CALL API ═══ */
+async function callAPI(prompt){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-request-allowed':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:7000,messages:[{role:'user',content:prompt}]})
+  });
+  const data=await res.json();
+  const raw=data.content?.map(b=>b.text||'').join('');
+  const clean=raw.replace(/```json|```/g,'').trim();
+  return JSON.parse(clean);
+}
 
-        window.regenerar = () => generateCopy();
+/* ═══ GERAR MANUAL ═══ */
+async function gerar(){
+  const get=id=>document.getElementById(id).value.trim();
+  const produto=get('produto'),nicho=get('nicho'),dor=get('dor'),resultado=get('resultado');
+  if(!produto||!nicho||!dor||!resultado){
+    ['produto','nicho','dor','resultado'].forEach(id=>{const el=document.getElementById(id);if(!el.value.trim()){el.style.borderColor='var(--red)';setTimeout(()=>el.style.borderColor='',2500);}});
+    return;
+  }
+  const p={produto,nicho,dor,resultado,mecanismo:get('mecanismo'),objecao:get('objecao'),prova:get('prova'),urgencia:get('urgencia')};
+  const qty=parseInt(document.getElementById('qty').value);
+  const sizesArr=Array.from(selSizes);
+  const btn=document.getElementById('gbtn');
+  btn.disabled=true;
+  document.getElementById('es').style.display='none';
+  document.getElementById('ld').classList.add('on');
+  document.getElementById('out').querySelectorAll('.oh,.cg,.sb2').forEach(e=>e.remove());
+  startPh();
+  try{
+    const parsed=await callAPI(buildPrompt(p,qty,selTone,selPlatforms,sizesArr));
+    stopPh(); document.getElementById('ld').classList.remove('on');
+    renderCopies(parsed.copies||[], document.getElementById('out'));
+  }catch(err){
+    stopPh(); document.getElementById('ld').classList.remove('on');
+    const d=document.createElement('div');d.className='es';
+    d.innerHTML=`<span class="ei">⚠️</span><div class="et">Erro ao gerar</div><div class="ed">${esc(err.message)}</div>`;
+    document.getElementById('out').appendChild(d);
+  }finally{btn.disabled=false;}
+}
 
-        window.exportTXT = () => {
-            const blob = new Blob([currentCopy.texto], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `copy_${Date.now()}.txt`;
-            a.click();
-        };
+/* ═══ GERAÇÃO AUTOMÁTICA ═══ */
+async function gerarAuto(){
+  if(!prods.length){ alert('Cadastre pelo menos um produto no banco primeiro.'); return; }
+  const qty=parseInt(document.getElementById('auto-qty').value);
+  const tone=document.getElementById('auto-tone').value;
+  const plat=document.getElementById('auto-plat').value;
+  const sizesArr=['curta','media','longa'];
 
-        window.exportSSML = () => {
-            let ssml = '<speak>\n';
-            const lines = currentCopy.texto.split('\n');
-            lines.forEach(line => {
-                if (line.trim()) ssml += `  <p>${line}</p>\n`;
-            });
-            ssml += '</speak>';
-            
-            const blob = new Blob([ssml], { type: 'text/xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `copy_${Date.now()}.ssml`;
-            a.click();
-        };
+  const btn=document.getElementById('auto-btn');
+  btn.disabled=true;
+  const prog=document.getElementById('auto-progress');
+  prog.classList.add('on');
+  const log=document.getElementById('auto-log');
+  const bar=document.getElementById('prog-bar');
+  const ptxt=document.getElementById('prog-txt');
+  const out=document.getElementById('auto-out');
+  out.innerHTML='';
+  log.innerHTML='';
 
-        window.importar = () => document.getElementById('modal').classList.add('active');
-        window.fecharModal = () => document.getElementById('modal').classList.remove('active');
+  const addLog=(msg,cls='')=>{ const d=document.createElement('div'); d.className='log-line '+cls; d.textContent=msg; log.appendChild(d); log.scrollTop=log.scrollHeight; };
 
-        window.salvarImport = async () => {
-            const texto = document.getElementById('iText').value;
-            const viral = document.getElementById('iViral').value === 'sim';
-            const formato = document.getElementById('iTipo').value;
-            const idioma = document.getElementById('iIdioma').value;
+  addLog('Iniciando geração automática…','run');
+  for(let i=0;i<prods.length;i++){
+    const p=prods[i];
+    const pct=Math.round((i/prods.length)*100);
+    bar.style.width=pct+'%';
+    ptxt.textContent=`Processando ${i+1}/${prods.length}: ${p.produto}`;
+    addLog(`→ Gerando ${qty} copies para: ${p.produto}`,'run');
+    try{
+      const parsed=await callAPI(buildPrompt(p,qty,tone,[plat],sizesArr));
+      const section=document.createElement('div');
+      section.style.marginBottom='24px';
+      const header=document.createElement('div');
+      header.style.cssText='font-family:Bebas Neue,sans-serif;font-size:18px;color:#fff;letter-spacing:.5px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px';
+      header.innerHTML=`<span style="background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.25);padding:2px 9px;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:9px;font-weight:700">PRODUTO ${i+1}</span>${esc(p.produto)} <span style="font-size:12px;color:var(--muted);font-family:DM Sans,sans-serif;font-weight:400">${esc(p.nicho)}</span>`;
+      section.appendChild(header);
+      renderCopies(parsed.copies||[], section, p.produto);
+      out.appendChild(section);
+      addLog(`✓ ${parsed.copies?.length||0} copies geradas para ${p.produto}`,'ok');
+    }catch(e){
+      addLog(`✗ Erro em ${p.produto}: ${e.message}`,'err');
+    }
+    // Pequena pausa para não estourar rate limit
+    if(i<prods.length-1) await new Promise(r=>setTimeout(r,1200));
+  }
+  bar.style.width='100%';
+  ptxt.textContent=`Concluído! ${prods.length} produto(s) processado(s)`;
+  addLog('Geração automática concluída!','ok');
+  btn.disabled=false;
+}
 
-            if (!texto) { alert('Digite texto!'); return; }
+/* ═══ RENDER COPIES ═══ */
+function renderCopies(copies, container, prodLabel=null){
+  if(!copies.length){ const d=document.createElement('div');d.className='es';d.innerHTML='<span class="ei">⚠️</span><div class="et">Nenhum copy retornado.</div>';container.appendChild(d);return; }
+  copies.forEach(c=>{ c._chars=(c.narracao||'').length; });
 
-            try {
-                await addDoc(collection(db, 'copies'), {
-                    texto, viral, formato, idioma,
-                    scores: { viral: 80, conversao: 70, engajamento: 75 },
-                    narration: { wordCount: texto.split(' ').length, syllables: 0, pauses: 0, readingTime: 30 },
-                    timestamp: serverTimestamp()
-                });
-                alert('✅ Importado!');
-                fecharModal();
-                document.getElementById('iText').value = '';
-                loadCopies();
-            } catch (err) { alert('❌ Erro'); }
-        };
+  const hdr=document.createElement('div');hdr.className='oh';
+  hdr.innerHTML=`<div class="ot" style="font-size:16px">${copies.length} roteiros</div><div class="oa"><button class="btn-ghost" onclick="copyAllIn(this)">📋 Copiar Todos</button><button class="btn-ghost" style="margin-left:4px" onclick="expandAllIn(this)">↕ Expandir</button></div>`;
+  container.appendChild(hdr);
 
-        async function loadCopies() {
-            try {
-                const q = query(collection(db, 'copies'), orderBy('timestamp', 'desc'));
-                const snap = await getDocs(q);
-                allCopies = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderCopies(allCopies);
-            } catch (err) { console.error(err); }
-        }
+  const grid=document.createElement('div');grid.className='cg';
+  copies.forEach((c,i)=>{
+    const tipo=(c.tipo||'TOFU').toUpperCase();
+    const tam=(c.tamanho||'media').toLowerCase();
+    const tcls=tipo==='TOFU'?'ct':tipo==='MOFU'?'cm':'cb';
+    const scls=tam==='curta'?'sc':tam==='media'?'sm':'sl';
+    const tlbl=tam==='curta'?'⚡ Curta':tam==='media'?'⚖️ Média':'📖 Longa';
+    const chars=c._chars;
+    const maxC=tam==='curta'?380:tam==='media'?580:1200;
+    const pct=Math.min(100,Math.round(chars/maxC*100));
+    const barC=tam==='curta'?'var(--tofu)':tam==='media'?'var(--mofu)':'var(--bofu)';
+    const uid=`cc-${Date.now()}-${i}`;
+    const card=document.createElement('div');
+    card.className=`cc ${tcls}`;
+    card.dataset.narr=c.narracao||'';
+    card.dataset.hook=c.hook||'';
+    card.dataset.tipo=tipo;
+    card.dataset.tam=tlbl;
+    card.id=uid;
+    card.innerHTML=`
+      <div class="ch2" onclick="togCard('${uid}')">
+        <div class="cb2">
+          <span class="ct2 ${tcls}">${tipo}</span>
+          <span class="csb ${scls}">${tlbl}</span>
+          ${prodLabel?`<span class="cprod-tag">${esc(prodLabel.substring(0,20))}</span>`:''}
+        </div>
+        <span class="ck">${esc(c.hook||'')}</span>
+        <span class="ccc">${chars} chars</span>
+        <span class="cv">▼</span>
+      </div>
+      <div class="cbody">
+        <div class="narr">${esc(c.narracao||'')}</div>
+        <div class="cbar"><div class="cfill" style="width:${pct}%;background:${barC}"></div></div>
+        <div class="cft">
+          <span class="cm2">🎙️ ${c.plataforma||''}</span>
+          <span class="cm2">📏 ${chars} chars</span>
+          <button class="ccb" onclick="cpOne(event,'${uid}')">📋 Copiar</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
 
-        function renderCopies(copies) {
-            const list = document.getElementById('list');
-            if (copies.length === 0) {
-                list.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Banco vazio...</div>';
-                return;
-            }
+  const act={tofu:copies.filter(c=>(c.tipo||'').toUpperCase()==='TOFU').length,mofu:copies.filter(c=>(c.tipo||'').toUpperCase()==='MOFU').length,bofu:copies.filter(c=>(c.tipo||'').toUpperCase()==='BOFU').length};
+  const n=copies.length;
+  const sb=document.createElement('div');sb.className='sb2';
+  sb.innerHTML=`<div class="si2"><div class="sd t"></div><span class="stx">TOFU</span><span class="sn">${act.tofu} (${Math.round(act.tofu/n*100)}%)</span></div><div class="si2"><div class="sd m"></div><span class="stx">MOFU</span><span class="sn">${act.mofu} (${Math.round(act.mofu/n*100)}%)</span></div><div class="si2"><div class="sd b"></div><span class="stx">BOFU</span><span class="sn">${act.bofu} (${Math.round(act.bofu/n*100)}%)</span></div>`;
+  container.appendChild(sb);
+  setTimeout(()=>togCard(grid.firstChild?.id),80);
+}
 
-            list.innerHTML = copies.map(c => {
-                const flag = c.idioma === 'pt' ? '🇧🇷' : c.idioma === 'es' ? '🇪🇸' : '🇺🇸';
-                const icon = c.formato === 'boneco' ? '🎭' : '👨‍⚕️';
-                return `
-                    <div class="copy-item">
-                        <div class="copy-item-header">
-                            <div class="copy-meta">
-                                ${c.viral ? '<span class="badge badge-viral">VIRAL</span>' : ''}
-                                <span class="badge badge-lang">${flag}</span>
-                                <span class="badge badge-type">${icon}</span>
-                            </div>
-                            <span style="color:#666;font-size:11px;">${c.timestamp ? new Date(c.timestamp.toDate()).toLocaleDateString() : ''}</span>
-                        </div>
-                        <div class="copy-text">${(c.texto || '').substring(0, 150)}...</div>
-                        <div class="copy-stats">
-                            <span>🔥 ${c.scores?.viral || 0}%</span>
-                            <span>💰 ${c.scores?.conversao || 0}%</span>
-                            <span>⚡ ${c.scores?.engajamento || 0}%</span>
-                            <span>⏱️ ${c.narration?.readingTime || 0}s</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
+function togCard(id){ if(id) document.getElementById(id)?.classList.toggle('open'); }
+function expandAllIn(btn){ btn.closest('.oh')?.nextElementSibling?.querySelectorAll?.('.cc').forEach(c=>c.classList.add('open')); }
+function cpOne(evt,uid){
+  evt.stopPropagation();
+  const card=document.getElementById(uid);if(!card)return;
+  navigator.clipboard.writeText(card.dataset.narr||'').then(()=>{
+    const b=card.querySelector('.ccb');b.textContent='✅ Copiado!';b.classList.add('cp');setTimeout(()=>{b.textContent='📋 Copiar';b.classList.remove('cp');},2000);
+  });
+}
+function copyAllIn(btn){
+  const grid=btn.closest('.oh')?.nextElementSibling;if(!grid)return;
+  let all='';
+  grid.querySelectorAll('.cc').forEach((card,i)=>{
+    all+=`\n${'─'.repeat(50)}\n[${card.dataset.tipo}] ${card.dataset.tam} — COPY ${i+1}\nHOOK: ${card.dataset.hook}\n\n${card.dataset.narr}\n`;
+  });
+  navigator.clipboard.writeText(all.trim()).then(()=>{btn.textContent='✅ Copiados!';setTimeout(()=>btn.textContent='📋 Copiar Todos',2200);});
+}
 
-        window.filter = (tipo) => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-            let filtered = allCopies;
-            if (tipo === 'virais') filtered = allCopies.filter(c => c.viral);
-            if (tipo === 'conversao') filtered = allCopies.filter(c => c.scores?.conversao >= 70);
-            if (tipo === 'boneco') filtered = allCopies.filter(c => c.formato === 'boneco');
-            if (tipo === 'persona') filtered = allCopies.filter(c => c.formato === 'persona');
-
-            renderCopies(filtered);
-        };
-
-        window.exportAll = () => {
-            const data = JSON.stringify(allCopies, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `banco_copies_${Date.now()}.json`;
-            a.click();
-        };
-
-        loadCopies();
-    </script>
+/* ─ INIT ─ */
+renderRefs();
+renderProds();
+updateAutoProdCount();
+</script>
 </body>
 </html>
